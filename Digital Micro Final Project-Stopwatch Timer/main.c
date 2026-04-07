@@ -2,7 +2,7 @@
  * Digital Micro Final Project-Stopwatch Timer.c
  *
  * Created: 4/7/2026 11:14:16 AM
- * Author : tornich
+ * Author : tornich and dahwill
  */ 
 
 #include <avr/io.h>
