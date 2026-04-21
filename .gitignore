@@ -1,0 +1,12 @@
+# Microchip Studio
+.vs/
+*.atsln
+*.cproj
+stopwatchproj/
+
+# Build outputs
+Debug/
+Release/
+*.elf
+*.hex
+*.o
