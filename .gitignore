@@ -2,7 +2,7 @@
 .vs/
 *.atsln
 *.cproj
-stopwatchproj/
+*.xml
 
 # Build outputs
 Debug/
