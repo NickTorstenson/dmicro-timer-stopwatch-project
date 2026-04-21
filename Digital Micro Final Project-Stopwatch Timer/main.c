@@ -10,63 +10,50 @@
 #include <avr/io.h>
 #include "digital_io.h"
 #include <util/delay.h>
+#include "stopwatch_timer_tools.h"
 
-void displayDigits(char d1, char d2);
 
 const char CLOCK = 2;
 const char SHIFT_DATA = 3;
 const char LATCH_CLOCK = 4;
 
 
-char value = 8;
 
+void usart_init (void) {
+	UCSR0B = (1<<TXEN0); // transmit enable
+	UCSR0C = (1<<UCSZ01)|(1<<UCSZ00); // 8bit data length
+	UBRR0L = 103; // 9600 baud
+}
 
-const int DIGITS[] = {
-	0b11111100,  // 0
-	0b01100000,  // 1
-	0b11011010,  // 2
-	0b11110010,  // 3
-	0b01100110,  // 4
-	0b10110110,  // 5
-	0b10111110,  // 6
-	0b11100000,  // 7
-	0b11111110,  // 8
-	0b11110110   // 9
-};
+void usart_send (unsigned char ch) {
+	while (!(UCSR0A & (1<<UDRE0)));
+	UDR0 = ch;
+}
 
 int main(void)
 {
-    pinMode(CLOCK, OUTPUT);
-    pinMode(SHIFT_DATA, OUTPUT);
-    pinMode(LATCH_CLOCK, OUTPUT);
-    digitalWrite(LATCH_CLOCK, LOW);
-	char i = 0;
+	char test_digits[] = {0,0,5,9,5,9,9,5};
+	
+	usart_init();
+	init_shift_reg(CLOCK, SHIFT_DATA, LATCH_CLOCK);
+	
     while (1) 
     {
-		displayDigits(i++, 0);
-		_delay_ms(200);
-		if (i > 9) 
-			i = 0;
+		
+		incrementDigits(-1, 7, test_digits);
+		for (int i = 0; i <= 7; i++) {
+			if (i == 2 | i == 4 | i == 6) usart_send(':');
+			usart_send(test_digits[i] + '0'); // convert to ASCII
+		}
+		usart_send('\r');
+		usart_send('\n');
+		_delay_ms(1000);
     }
+	return 0;
 }
 
 
-int decimalToSevenSegment(char decimal_num) {
-	return DIGITS[decimal_num];
-}
 
-void displayDigits(char d1) {
-	digitalWrite(LATCH_CLOCK, LOW);
-	
-	// shift out rightmost digit first
-	//shiftOut(SHIFT_DATA, CLOCK, MSBFIRST, DIGITS[d3]);
-	//shiftOut(SHIFT_DATA, CLOCK, LSBFIRST, DIGITS[d2]);
-	shiftOut(SHIFT_DATA, CLOCK, LSBFIRST, DIGITS[d1]);
-	
-	// latch all at once
-	digitalWrite(LATCH_CLOCK, HIGH);
-	digitalWrite(LATCH_CLOCK, LOW);
-}
 
 
 
