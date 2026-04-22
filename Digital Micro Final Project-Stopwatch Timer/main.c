@@ -1,61 +1,123 @@
 /*
- * Digital Micro Final Project-Stopwatch Timer.c
+ * Stopwatch_States.c
  *
- * Created: 4/7/2026 11:14:16 AM
- * Author : tornich and dahwill
+ * Created: 4/21/2026 12:24:57 PM
+ * Author : dahwilw
  */ 
 
 #include <avr/io.h>
+#include <avr/interrupt.h>
 #define F_CPU 16000000
-#include <avr/io.h>
-#include "digital_io.h"
 #include <util/delay.h>
 #include "stopwatch_timer_tools.h"
 
+#define IDLE 0
+#define COUNT_UP 1
+#define SET_NUMBERS 2
+#define COUNT_DOWN 3
+#define RESET 4
 
-const char CLOCK = 2;
-const char SHIFT_DATA = 3;
-const char LATCH_CLOCK = 4;
+#define Up 0
+#define Down 1 
+
+#define DELAY 10 //Number of ms between the smallest counts
 
 
+void incrementDigits (int direction, int index, char digits[]);
 
-void usart_init (void) {
-	UCSR0B = (1<<TXEN0); // transmit enable
-	UCSR0C = (1<<UCSZ01)|(1<<UCSZ00); // 8bit data length
-	UBRR0L = 103; // 9600 baud rate
-}
+void displayDigits(char digits[], char direction);
 
-void usart_send (unsigned char ch) {
-	while (!(UCSR0A & (1<<UDRE0)));
-	UDR0 = ch;
-}
+
+volatile int STATE = IDLE;
+char Numbers[8] = {0,0,0,0, 0,0,0,0};
+char ORDER = LSBFIRST;
+volatile int Direction = 0; //1 counts up, 0 doesn't count, -1 counts down
+volatile char Mode = Up; // Up or Down for counting up or down, defaults to up on startup
+volatile char Count = 0;
+
 
 int main(void)
 {
-	char test_digits[] = {0,0,5,9,5,9,9,5};
 	
-	usart_init();
-	init_shift_reg(CLOCK, SHIFT_DATA, LATCH_CLOCK);
+	EIMSK |= (1<<INT0); // Set PORTD2 interrupt (Start/Lab)
+	EIMSK |= (1<<INT1); // Set PORTD3 interrupt (Stop/Reset)
+	EICRA = 0b00001010; // Both are set to trigger on the falling edge
 	
-    while (1) 
-    {
-		
-		incrementDigits(-1, 7, test_digits);
-		for (int i = 0; i <= 7; i++) {
-			if (i == 2 | i == 4 | i == 6) usart_send(':');
-			usart_send(test_digits[i] + '0'); // convert to ASCII
+	PCICR |= (1<<PCIE0); //sets PC interrupt to look at PORTB
+	PCMSK0 |= (1<<PCINT0); //sets PC interrupt to look at Pin0 (PORTB0) (Mode)
+	
+	sei();
+	
+	while(1){
+		if (STATE == IDLE){
+			SLEEP_MODE_IDLE;
 		}
-		usart_send('\r');
-		usart_send('\n');
-		_delay_ms(1000);
-    }
-	return 0;
+		else if (STATE == COUNT_UP){
+			displayDigits(Numbers, ORDER); // call function to display numbers on 7 segs
+			incrementDigits(Direction, 7, Numbers);  //increments count
+			_delay_ms(DELAY);
+		}
+		else if (STATE == SET_NUMBERS){
+			//Set Numbers code
+		}
+		else if (STATE == COUNT_DOWN){
+			displayDigits(Numbers, ORDER); // call function to display numbers on 7 segs
+			incrementDigits(Direction, 7, Numbers);  //increments count
+			_delay_ms(DELAY);
+		}
+		else if (STATE == RESET){
+			Numbers[0] = 0; //set entire array to zero
+			Numbers[1] = 0;
+			Numbers[2] = 0;
+			Numbers[3] = 0;
+			Numbers[4] = 0;
+			Numbers[5] = 0;
+			Numbers[6] = 0;
+			Numbers[7] = 0;
+			//Add Idle Timer
+		}
+		else {
+			STATE = IDLE;
+		}
+	}
 }
 
+ISR(INT0_vect){ // Start/Lap Button
+	if (STATE == (IDLE|RESET|SET_NUMBERS)){ //Start
+		if (Mode == Up){
+			Direction = 1;
+			STATE = COUNT_UP;
+		}
+		else {
+			Direction = -1;
+			STATE = COUNT_DOWN;
+		}
+	}
+	else{ // Lap
+		// Lap Code Here
+	}
+}
 
+ISR(INT1_vect){ // Stop/Reset Button
+	if (Direction != 0){//Stop
+		Direction = 0;
+	}
+	else{ // Reset
+		STATE = RESET;
+	}
+}
 
-
-
-
-
-
+ISR(PCINT0_vect){ // Mode
+	if (Count == 2){
+		if (Mode == Up){
+			Mode = Down;
+		}
+		else{
+			Mode = Up;
+		}
+		Count = 0;
+	}
+	else {
+		Count++;
+	}
+}
