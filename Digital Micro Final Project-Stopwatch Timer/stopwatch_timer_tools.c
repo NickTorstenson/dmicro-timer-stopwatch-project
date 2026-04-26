@@ -13,7 +13,7 @@ const int SEVEN_SEGMENT_DIGITS[] = {
 	0b11100000,  // 7
 	0b11111110,  // 8
 	0b11110110,  // 9
-	0b00000000,  // Blank
+	0b00000000,  // 10 Blank
 };
 
 char SHIFT_CLOCK_PIN = 0;
