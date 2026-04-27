@@ -1,11 +1,6 @@
 
-#include <avr/io.h>
 #include "digital_io.h"
-#include <stdio.h>
 
-static char JOYSTICK_VRX;
-static char JOYSTICK_VRY;
-static char JOYSTICK_SW;
 
 void togglePin(unsigned char pin) {
 	digitalWrite(pin, !digitalRead(pin));
@@ -37,7 +32,6 @@ void shiftOut(unsigned char dataPin,
 		digitalWrite(clockPin, LOW);
 	}
 }
-
 
 void pinMode(unsigned char pin, unsigned char mode)
 {
@@ -94,41 +88,67 @@ unsigned char digitalRead(unsigned char pin)
 	return LOW;
 }
 
-void init_joystick(char joystick_vrx, char joystick_vry, char joystick_sw) {
-	JOYSTICK_VRX = joystick_vrx;
-	pinMode(joystick_vrx, INPUT);
-	JOYSTICK_VRY = joystick_vry;
-	pinMode(joystick_vry, INPUT);
-	JOYSTICK_SW = joystick_sw;
-	pinMode(joystick_sw, INPUT_PULLUP);
+void init_joystick(Joystick *joystick, uint8_t x_channel, uint8_t y_channel, uint8_t sw_pin) {
+	/* 
+	x_channel/y_channel: analog channel (A0 = 0, A1 = 1, etc)
+	sw_pin: digital input pin for the switch
+	*/
+	
+	joystick->x_ch = x_channel;
+	joystick->y_ch = y_channel;
+	joystick->sw_pin = sw_pin;
+	
+	pinMode(sw_pin, INPUT_PULLUP);
 }
 
-void joystickInput(uint16_t *output) { // changes the values in the given array to the inputs
+JoystickState read_joystick(const Joystick *joystick) { // outputs a struct with the raw joystick values
 	/*
-		Output from 0-667, Center: A0 - 335/336, A1 - 331/332
-		
 	USAGE:
-	
-		init_joystick(23, 24, 4);
-		
-		uart_init(F_CPU, 9600);
+		Joystick joystick; // create a joystick "object"
+		JoystickState joystick_state; // create a joystick state with x, y, and pressed values
 		
 		adc_init();
+		init_joystick(&joystick, 0, 1, 2);
+		joystick_state = read_joystick(&joystick);
 		
-		while (1) {
+	OUTPUT:
+		JoystickState {
+			x: x position of the joystick 0-1023, center 516
+			y: y position of the joystick 0-1023, center 510
+			pressed: 0 not pressed, 1 pressed
+		}
+	
+	DEBUG USE:
+		Joystick joystick;
+		JoystickState joystick_state;
+		
+		adc_init();
+		init_joystick(&joystick, 0, 1, 2);
+		uart_init(F_CPU, 9600);
+		
+		while(1) {
+			joystick_state = read_joystick(&joystick);
 			
-			uint16_t joy[2];
-			joystickInput(joy);
+			char buffer[80];
+			sprintf(buffer, "\nX:%u Y:%u SW:%u CHX:%u CHY:%u\n",
+			joystick_state.x,
+			joystick_state.y,
+			joystick_state.pressed,
+			joystick.x_ch,
+			joystick.y_ch);
 
-			char buffer[32];
-			sprintf(buffer, "X:%u Y:%u\n", joy[0], joy[1]);
 			uart_print(buffer);
 		}
 	*/
-	output[0] = adc_read(0);
-	output[1] = adc_read(1);
+	
+	JoystickState state;
+	
+	state.x = adc_read(joystick->x_ch);
+	state.y = adc_read(joystick->y_ch);
+	state.pressed = (digitalRead(joystick->sw_pin) == LOW);
+	
+	return state;
 }
-
 
 void uart_init(unsigned long FCPU, unsigned long baud_rate) {
 	unsigned long ubrr = ((FCPU / 16 / baud_rate) - 1);
