@@ -66,16 +66,19 @@ int main(void)
 			incrementDigits(Direction, 7, Numbers);  //increments count
 			_delay_ms(DELAY);
 			TCNT1 = 0;
+			Timer_Count = 0;
 		}
 		else if (STATE == SET_NUMBERS){
 			//Set Numbers code
 			TCNT1 = 0;
+			Timer_Count = 0;
 		}
 		else if (STATE == COUNT_DOWN){
 			displayDigits(Numbers, ORDER); // call function to display numbers on 7 segs
 			incrementDigits(Direction, 7, Numbers);  //increments count
 			_delay_ms(DELAY);
 			TCNT1 = 0;
+			Timer_Count = 0;
 		}
 		else if (STATE == RESET){
 			Numbers[0] = 10; //set entire array to blank
