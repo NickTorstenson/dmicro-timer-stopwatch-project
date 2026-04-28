@@ -118,7 +118,7 @@ JoystickState read_joystick(const Joystick *joystick) { // outputs a struct with
 			pressed: 0 not pressed, 1 pressed
 		}
 	
-	DEBUG USE:
+	DEBUG USAGE:
 		Joystick joystick;
 		JoystickState joystick_state;
 		

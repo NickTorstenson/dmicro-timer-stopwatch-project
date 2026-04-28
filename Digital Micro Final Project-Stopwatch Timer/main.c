@@ -29,11 +29,13 @@ void displayDigits(char digits[], char direction);
 
 
 volatile int STATE = IDLE;
-char Numbers[8] = {0,0,0,0, 0,0,0,0};
+char Numbers[8] = {10,10,10,10, 10,10,10,10};
 char ORDER = LSBFIRST;
 volatile int Direction = 0; //1 counts up, 0 doesn't count, -1 counts down
 volatile char Mode = Up; // Up or Down for counting up or down, defaults to up on startup
 volatile char Count = 0;
+volatile char Timer_Count = 0;
+
 
 
 int main(void)
@@ -46,6 +48,13 @@ int main(void)
 	PCICR |= (1<<PCIE0); //sets PC interrupt to look at PORTB
 	PCMSK0 |= (1<<PCINT0); //sets PC interrupt to look at Pin0 (PORTB0) (Mode)
 	
+	TCNT1 = 0;
+	TIMSK1 |= (1<<OCIE1A);
+	TCCR1A = 0;
+	TCCR1B = (1 << WGM12) | (1 << CS12) | (1 << CS10); // CTC, pre-scaler 1024
+	OCR1A = (15624); 
+
+	
 	sei();
 	
 	while(1){
@@ -56,34 +65,38 @@ int main(void)
 			displayDigits(Numbers, ORDER); // call function to display numbers on 7 segs
 			incrementDigits(Direction, 7, Numbers);  //increments count
 			_delay_ms(DELAY);
+			TCNT1 = 0;
 		}
 		else if (STATE == SET_NUMBERS){
 			//Set Numbers code
+			TCNT1 = 0;
 		}
 		else if (STATE == COUNT_DOWN){
 			displayDigits(Numbers, ORDER); // call function to display numbers on 7 segs
 			incrementDigits(Direction, 7, Numbers);  //increments count
 			_delay_ms(DELAY);
+			TCNT1 = 0;
 		}
 		else if (STATE == RESET){
-			Numbers[0] = 0; //set entire array to zero
-			Numbers[1] = 0;
-			Numbers[2] = 0;
-			Numbers[3] = 0;
-			Numbers[4] = 0;
-			Numbers[5] = 0;
-			Numbers[6] = 0;
-			Numbers[7] = 0;
-			//Add Idle Timer
+			Numbers[0] = 10; //set entire array to blank
+			Numbers[1] = 10;
+			Numbers[2] = 10;
+			Numbers[3] = 10;
+			Numbers[4] = 10;
+			Numbers[5] = 10;
+			Numbers[6] = 10;
+			Numbers[7] = 10;
 		}
-		else {
+		else { // Emergency Catch, Should Never Reach Here
 			STATE = IDLE;
 		}
 	}
 }
 
+
+
 ISR(INT0_vect){ // Start/Lap Button
-	if (STATE == (IDLE|RESET|SET_NUMBERS)){ //Start
+	if ((STATE == IDLE)||(STATE == RESET)||(STATE == SET_NUMBERS)){ //Start
 		if (Mode == Up){
 			Direction = 1;
 			STATE = COUNT_UP;
@@ -107,7 +120,7 @@ ISR(INT1_vect){ // Stop/Reset Button
 	}
 }
 
-ISR(PCINT0_vect){ // Mode
+ISR(PCINT0_vect){ // Mode (Could switch to a timer set to an "external timer" triggered by the button")
 	if (Count == 2){
 		if (Mode == Up){
 			Mode = Down;
@@ -118,6 +131,16 @@ ISR(PCINT0_vect){ // Mode
 		Count = 0;
 	}
 	else {
-		Count++;
+		Count++; // De-bounce
+	}
+}
+
+ISR(TIMER1_COMPA_vect){ // Idle Timer
+	if (Timer_Count == 10){
+		Timer_Count = 0;
+		STATE = IDLE;
+	}
+	else {
+		Timer_Count++;
 	}
 }
