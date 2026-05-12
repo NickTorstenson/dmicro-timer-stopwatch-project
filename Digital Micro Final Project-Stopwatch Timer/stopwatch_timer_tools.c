@@ -35,7 +35,7 @@ void displayDigits(char digits[], char direction) {
 	// Direction: MSBFIRST or LSBFIRST
 	digitalWrite(SHIFT_LATCH_PIN, LOW);
 	for (int i = 0; i < 8; i++){
-		shiftOut(SHIFT_DATA_PIN, SHIFT_CLOCK_PIN, direction, SEVEN_SEGMENT_DIGITS[i]);
+		shiftOut(SHIFT_DATA_PIN, SHIFT_CLOCK_PIN, direction, SEVEN_SEGMENT_DIGITS[digits[i]]);
 	}
 	// display all at once
 	digitalWrite(SHIFT_LATCH_PIN, HIGH);
