@@ -35,7 +35,8 @@ volatile int Direction = 0; //1 counts up, 0 doesn't count, -1 counts down
 volatile char Mode = Up; // Up or Down for counting up or down, defaults to up on startup
 volatile char Count = 0;
 volatile char Timer_Count = 0;
-
+char lap_records[100][16]; // 100 Lap strings, 16 bits long
+uint8_t lap_index = 0;
 
 
 int main(void)
@@ -108,6 +109,15 @@ ISR(INT0_vect){ // Start/Lap Button
 	}
 	else{ // Lap
 		// Lap Code Here
+		// Take in Numbers array, split indexes up and append to Lap (array) needs to be in format "LAPX|HH:MM:ss:mm"
+		snprintf(lap_records[lap_index], sizeof(lap_records[lap_index]), "LAP%d|%d%d:%d%d:%d%d:%d%d", 
+		lap_index++, 
+		Numbers[0], Numbers[1], 
+		Numbers[2], Numbers[3], 
+		Numbers[4], Numbers[5], 
+		Numbers[6], Numbers[7]); // I tried being clever, if not working update lap index on its own after
+		
+		// TODO: Update the LCD with lap string
 	}
 }
 
