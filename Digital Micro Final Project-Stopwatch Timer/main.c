@@ -20,6 +20,11 @@
 #define Up 0
 #define Down 1 
 
+#define SHIFT_CLOCK_PIN 5
+#define SHIFT_DATA_PIN 6
+#define SHIFT_LATCH_PIN 7
+#define BuzzerPin 11
+
 #define DELAY 10 //Number of ms between the smallest counts
 
 
@@ -34,73 +39,116 @@ char ORDER = LSBFIRST;
 volatile int Direction = 0; //1 counts up, 0 doesn't count, -1 counts down
 volatile char Mode = Up; // Up or Down for counting up or down, defaults to up on startup
 volatile char Count = 0;
+volatile char PresentModeState = 0;
+volatile char PastModeState = 0;
 volatile char Timer_Count = 0;
 char lap_records[100][16]; // 100 Lap strings, 16 bits long
 uint8_t lap_index = 0;
 
 
+
+
 int main(void)
 {
-	
-	EIMSK |= (1<<INT0); // Set PORTD2 interrupt (Start/Lab)
-	EIMSK |= (1<<INT1); // Set PORTD3 interrupt (Stop/Reset)
+	DDRB = 1<<5;
+	EIMSK |= (1<<INT0); // Set PORTD2 interrupt (Start/Lap) (pin 2)
+	pinMode(2, INPUT_PULLUP);
+	EIMSK |= (1<<INT1); // Set PORTD3 interrupt (Stop/Reset) (pin 3)
+	pinMode(3, INPUT_PULLUP);
 	EICRA = 0b00001010; // Both are set to trigger on the falling edge
 	
 	PCICR |= (1<<PCIE0); //sets PC interrupt to look at PORTB
 	PCMSK0 |= (1<<PCINT0); //sets PC interrupt to look at Pin0 (PORTB0) (Mode)
+	pinMode(8, INPUT_PULLUP);
 	
 	TCNT1 = 0;
 	TIMSK1 |= (1<<OCIE1A);
 	TCCR1A = 0;
 	TCCR1B = (1 << WGM12) | (1 << CS12) | (1 << CS10); // CTC, pre-scaler 1024
 	OCR1A = (15624); 
+	
+	init_shift_reg(SHIFT_CLOCK_PIN, SHIFT_DATA_PIN, SHIFT_LATCH_PIN);
+	
+	displayDigits(Numbers, ORDER); // call function to display numbers on 7 segs
+	
+	pinMode(BuzzerPin,OUTPUT);
+	
 
+	/*
+	while (1){
+		incrementDigits(1, 7, Numbers);
+		displayDigits(Numbers, ORDER);
+		_delay_ms(10);
+	}
+	*/
 	
 	sei();
-	
 	while(1){
-		if (STATE == IDLE){
-			SLEEP_MODE_IDLE;
+		digitalWrite(BuzzerPin,LOW); //Buzzer off
+		switch(STATE) {
+			case IDLE:
+				SLEEP_MODE_IDLE;
+				continue;
+				
+			case COUNT_UP:
+				displayDigits(Numbers, ORDER); // call function to display numbers on 7 segs
+				incrementDigits(Direction, 7, Numbers);  //increments count
+				_delay_ms(DELAY);
+				TCNT1 = 0;
+				Timer_Count = 0;
+		
+				continue;
+				
+			case SET_NUMBERS:
+				//Set Numbers code
+				TCNT1 = 0;
+				Timer_Count = 0;
+				continue;
+				
+			case COUNT_DOWN:
+				if ( ((Numbers[0] == 0) || (Numbers[0] == 10)) && ((Numbers[1] == 0) || (Numbers[1] == 10)) && ((Numbers[2] == 0) || (Numbers[2] == 10)) && ((Numbers[3] == 0) || (Numbers[3] == 10)) && ((Numbers[4] == 0) || (Numbers[4] == 10)) && ((Numbers[5] == 0) || (Numbers[5] == 10)) && ((Numbers[6] == 0) || (Numbers[6] == 10)) && ((Numbers[7] == 0) || (Numbers[7] == 10)) ) {
+					Direction = 0;
+					digitalWrite(BuzzerPin,HIGH); //Buzzer on
+				}
+				else{
+					Direction = -1;
+				}
+			
+				displayDigits(Numbers, ORDER); // call function to display numbers on 7 segs
+				incrementDigits(Direction, 7, Numbers);  //increments count
+				_delay_ms(DELAY);
+				
+				TCNT1 = 0;
+				Timer_Count = 0;
+			
+				continue;
+				
+			case RESET:
+				Numbers[0] = 10; //set entire array to blank
+				Numbers[1] = 10;
+				Numbers[2] = 10;
+				Numbers[3] = 10;
+				Numbers[4] = 10;
+				Numbers[5] = 10;
+				Numbers[6] = 10;
+				Numbers[7] = 10;
+				displayDigits(Numbers, ORDER);
+				continue;
+				
+			default:
+				STATE = IDLE;
+				continue;
 		}
-		else if (STATE == COUNT_UP){
-			displayDigits(Numbers, ORDER); // call function to display numbers on 7 segs
-			incrementDigits(Direction, 7, Numbers);  //increments count
-			_delay_ms(DELAY);
-			TCNT1 = 0;
-			Timer_Count = 0;
-		}
-		else if (STATE == SET_NUMBERS){
-			//Set Numbers code
-			TCNT1 = 0;
-			Timer_Count = 0;
-		}
-		else if (STATE == COUNT_DOWN){
-			displayDigits(Numbers, ORDER); // call function to display numbers on 7 segs
-			incrementDigits(Direction, 7, Numbers);  //increments count
-			_delay_ms(DELAY);
-			TCNT1 = 0;
-			Timer_Count = 0;
-		}
-		else if (STATE == RESET){
-			Numbers[0] = 10; //set entire array to blank
-			Numbers[1] = 10;
-			Numbers[2] = 10;
-			Numbers[3] = 10;
-			Numbers[4] = 10;
-			Numbers[5] = 10;
-			Numbers[6] = 10;
-			Numbers[7] = 10;
-		}
-		else { // Emergency Catch, Should Never Reach Here
-			STATE = IDLE;
-		}
+		
+		
+	
 	}
 }
 
 
 
 ISR(INT0_vect){ // Start/Lap Button
-	if ((STATE == IDLE)||(STATE == RESET)||(STATE == SET_NUMBERS)){ //Start
+	if (Direction == 0){ //Start
 		if (Mode == Up){
 			Direction = 1;
 			STATE = COUNT_UP;
@@ -134,7 +182,8 @@ ISR(INT1_vect){ // Stop/Reset Button
 }
 
 ISR(PCINT0_vect){ // Mode (Could switch to a timer set to an "external timer" triggered by the button")
-	if (Count == 2){
+	
+	if (Count==1){
 		if (Mode == Up){
 			Mode = Down;
 		}
@@ -142,9 +191,11 @@ ISR(PCINT0_vect){ // Mode (Could switch to a timer set to an "external timer" tr
 			Mode = Up;
 		}
 		Count = 0;
+		
 	}
+	
 	else {
-		Count++; // De-bounce
+		Count++;
 	}
 }
 

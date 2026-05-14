@@ -56,13 +56,15 @@ void incrementDigits (int direction, int index, char digits[]) {
 		MSB -> index 0
 		LSB -> index 7
 	*/
-	
+	if (digits[index] == 10){
+		digits[index] = 0;
+	}
 	if (direction == 0 || index < 0) // Don't compute
 	{
 		return;
 	}
 	
-	if (index == 3 || index == 5 || index == 6 || index == 7) {
+	if (index == 0 || index == 1 || index == 3 || index == 5 || index == 6 || index == 7) {
 		if (direction > 0 && digits[index] == 9) {
 			digits[index] = 0;
 			incrementDigits(direction, index-1, digits);
