@@ -56,10 +56,9 @@ void incrementDigits (int direction, int index, char digits[]) {
 		MSB -> index 0
 		LSB -> index 7
 	*/
-	//if (digits[index] == 10){
-		//digits[index] = 0;
-	//}
-	
+	if (digits[index] == 10){
+		digits[index] = 0;
+	}
 	if (direction == 0 || index < 0) // Don't compute
 	{
 		return;
