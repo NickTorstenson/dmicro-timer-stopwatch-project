@@ -34,7 +34,7 @@ void displayDigits(char digits[], char direction);
 
 
 volatile int STATE = IDLE;
-char Numbers[8] = {10,10,10,10, 10,10,10,10};
+char Numbers[8] = {0,0,0,0, 0,0,0,0};
 char ORDER = LSBFIRST;
 volatile int Direction = 0; //1 counts up, 0 doesn't count, -1 counts down
 volatile char Mode = Up; // Up or Down for counting up or down, defaults to up on startup
@@ -71,16 +71,12 @@ int main(void)
 	
 	displayDigits(Numbers, ORDER); // call function to display numbers on 7 segs
 	
-	pinMode(BuzzerPin,OUTPUT);
+	pinMode(BuzzerPin, OUTPUT);
 	
-
-	/*
-	while (1){
-		incrementDigits(1, 7, Numbers);
-		displayDigits(Numbers, ORDER);
-		_delay_ms(10);
-	}
-	*/
+	// LCD init
+	LCD lcd;
+	
+	//lcd_init(lcd, );
 	
 	sei();
 	while(1){
