@@ -73,14 +73,13 @@ int main(void)
 	
 	pinMode(BuzzerPin,OUTPUT);
 	
-
-	/*
-	while (1){
-		incrementDigits(1, 7, Numbers);
-		displayDigits(Numbers, ORDER);
-		_delay_ms(10);
-	}
-	*/
+	Joystick joystick;
+	JoystickState joystick_state;
+	
+	adc_init();
+	init_joystick(&joystick, 0, 1, 2);
+	char timer_index = 7;
+	char joystick_held = 0;
 	
 	sei();
 	while(1){
@@ -101,6 +100,33 @@ int main(void)
 				
 			case SET_NUMBERS:
 				//Set Numbers code
+				
+				joystick_state = read_joystick(&joystick);
+				
+				if (joystick_state.x > 530 && !joystick_held){
+					joystick_held = 1;
+					if (timer_index == 0){
+						timer_index = 7;
+					} else{
+						timer_index--
+					}
+				} else if (joystick_state < 500 && !joystick_held) {
+					joystick_held = 1;
+					if (timer_index == 7){
+						timer_index = 0;
+						} else{
+						timer_index++;
+					}
+				} else if (joystick_state.y > 530 && !joystick_held){
+					joystick_held = 1;
+					Numbers[timer_index] = Numbers[timer_index]++;
+				} else if (joystick_state.y < 490 && !joystick_held){
+					joystick_held = 1;
+					Numbers[timer_index] = Numbers[timer_index]--;
+				} else {
+					joystick_held = 0;
+				}
+				
 				TCNT1 = 0;
 				Timer_Count = 0;
 				continue;
