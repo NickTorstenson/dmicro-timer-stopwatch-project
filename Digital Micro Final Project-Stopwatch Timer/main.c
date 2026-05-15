@@ -126,7 +126,7 @@ int main(void)
 				} else {
 					joystick_held = 0;
 				}
-				
+				displayDigits(Numbers, Direction);
 				TCNT1 = 0;
 				Timer_Count = 0;
 				continue;
