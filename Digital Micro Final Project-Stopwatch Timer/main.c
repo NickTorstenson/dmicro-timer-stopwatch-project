@@ -77,7 +77,7 @@ int main(void)
 	JoystickState joystick_state;
 	
 	adc_init();
-	init_joystick(&joystick, 0, 1, 2);
+	init_joystick(&joystick, 0, 1, 7);
 	char timer_index = 7;
 	char joystick_held = 0;
 	
@@ -101,34 +101,47 @@ int main(void)
 			case SET_NUMBERS:
 				//Set Numbers code
 				
+				
+				displayDigits(Numbers, ORDER);
+				
 				joystick_state = read_joystick(&joystick);
 				
-				if (joystick_state.x > 530 && !joystick_held){
+				if ((joystick_state.x < 500) && (!joystick_held)){
 					joystick_held = 1;
 					if (timer_index == 0){
 						timer_index = 7;
 					} else{
-						timer_index--
+						timer_index= (timer_index-1);
 					}
-				} else if (joystick_state < 500 && !joystick_held) {
+				} else if ((joystick_state.x > 530) && (!joystick_held)) {
 					joystick_held = 1;
 					if (timer_index == 7){
 						timer_index = 0;
 						} else{
-						timer_index++;
+						timer_index= (timer_index+1);
 					}
-				} else if (joystick_state.y > 530 && !joystick_held){
+				} else if ((joystick_state.y < 490) && (!joystick_held)){
 					joystick_held = 1;
-					Numbers[timer_index] = Numbers[timer_index]++;
-				} else if (joystick_state.y < 490 && !joystick_held){
+					if (Numbers[timer_index] == 9){
+						Numbers[timer_index] = 0;	
+					}else{
+						Numbers[timer_index] = (Numbers[timer_index]+1);
+					}
+				} else if ((joystick_state.y > 530) && (!joystick_held)){
 					joystick_held = 1;
-					Numbers[timer_index] = Numbers[timer_index]--;
-				} else {
+					if (Numbers[timer_index] == 0){
+						Numbers[timer_index] = 9;
+						}else{
+						Numbers[timer_index] = (Numbers[timer_index]-1);
+					}
+				} else if(((joystick_state.x < 530)&&(joystick_state.x > 500)) && ((joystick_state.x < 530)&&(joystick_state.x > 490))){
 					joystick_held = 0;
 				}
-				displayDigits(Numbers, Direction);
+				displayDigits(Numbers, ORDER);
+				_delay_ms(100);
 				TCNT1 = 0;
 				Timer_Count = 0;
+				
 				continue;
 				
 			case COUNT_DOWN:
@@ -159,6 +172,19 @@ int main(void)
 				Numbers[6] = 10;
 				Numbers[7] = 10;
 				displayDigits(Numbers, ORDER);
+				
+				if (Mode == Down) {
+					Numbers[0] = 0; //set entire array to blank
+					Numbers[1] = 0;
+					Numbers[2] = 0;
+					Numbers[3] = 0;
+					Numbers[4] = 0;
+					Numbers[5] = 0;
+					Numbers[6] = 0;
+					Numbers[7] = 0;
+					displayDigits(Numbers, ORDER);
+					STATE = SET_NUMBERS;
+				}
 				continue;
 				
 			default:

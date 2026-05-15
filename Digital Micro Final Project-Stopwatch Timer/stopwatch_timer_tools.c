@@ -40,6 +40,7 @@ void displayDigits(char digits[], char direction) {
 	// display all at once
 	digitalWrite(SHIFT_LATCH_PIN, HIGH);
 	digitalWrite(SHIFT_LATCH_PIN, LOW);
+	
 }
 
 void incrementDigits (int direction, int index, char digits[]) {
