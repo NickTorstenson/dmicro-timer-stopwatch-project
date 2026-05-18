@@ -27,11 +27,11 @@
 #define START_LAP_BUTTON 2
 #define STOP_RESET_BUTTON 3
 #define MODE_BUTTON 8
-#define BuzzerPin 19
+#define BuzzerPin 11
 
 
 
-#define DELAY 10 //Number of ms between the smallest counts
+#define DELAY 9 //Number of ms between the smallest counts
 
 
 void incrementDigits (int direction, int index, char digits[]);
@@ -49,8 +49,9 @@ volatile char Timer_Count = 0;
 char lap_records[50][19]; // 100 Lap strings, 16 bits long
 uint8_t lap_index = 1;
 
-
-
+char timer_set_flash = 0;
+char timer_set_flash_counter = 0;
+char temp_numbers[8];
 
 
 int main(void)
@@ -72,6 +73,11 @@ int main(void)
 	TCCR1B = (1 << WGM12) | (1 << CS12) | (1 << CS10); // CTC, pre-scaler 1024
 	OCR1A = (15624); 
 	
+	TCNT2 = 0;
+	TIMSK2 = (1 << TOIE2);
+	TCCR2A = 0;
+	TCCR2B = (1 << CS22) | (1 << CS21) | (0 << CS20); // Normal Mode PS 1024
+	
 	init_shift_reg(SHIFT_CLOCK_PIN, SHIFT_DATA_PIN, SHIFT_LATCH_PIN);
 	
 	displayDigits(Numbers, ORDER); // call function to display numbers on 7 segs
@@ -86,7 +92,9 @@ int main(void)
 	char timer_index = 7;
 	char joystick_held = 0;
 	
-	
+	for (int i = 0; i < 8; i++){
+		temp_numbers[i] = Numbers[i];
+	}
 	
 	sei();
 	while(1){
@@ -144,11 +152,26 @@ int main(void)
 					joystick_held = 0;
 				}
 				
-
+				// IF FLASH
+					// Display flashing_numbers after setting flashing_numbers[timer_index] = 10 (blank)
+				// ELSE
+					// Display "Numbers" as normal
+				
+				if (timer_set_flash) {
+					temp_numbers[timer_index] = 10;
+					displayDigits(temp_numbers, ORDER);
+				} else {
+					displayDigits(Numbers, ORDER);
+				}
 						
 				TCNT1 = 0;
 				Timer_Count = 0;
-				
+				for (int i = 0; i < 8; i++){
+					temp_numbers[i] = Numbers[i];
+				}
+				if (Mode == Up) {
+					STATE = RESET;
+				}
 				continue;
 				
 			case COUNT_DOWN:
@@ -191,7 +214,9 @@ int main(void)
 					Numbers[6] = 0;
 					Numbers[7] = 0;
 					displayDigits(Numbers, ORDER);
-					
+					for (int i = 0; i < 8; i++){
+						temp_numbers[i] = Numbers[i];
+					}
 					STATE = SET_NUMBERS;
 				}
 				continue;
@@ -269,5 +294,13 @@ ISR(TIMER1_COMPA_vect){ // Idle Timer
 	}
 	else {
 		Timer_Count++;
+	}
+}
+
+ISR(TIMER2_OVF_vect) {
+	timer_set_flash_counter++;
+	if (timer_set_flash_counter > 14) {
+		timer_set_flash = ~timer_set_flash;
+		timer_set_flash_counter = 0;
 	}
 }
