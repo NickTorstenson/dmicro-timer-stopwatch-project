@@ -24,13 +24,6 @@
 #define SHIFT_DATA_PIN 6
 #define SHIFT_LATCH_PIN 4
 
-#define LCD_RS 9
-#define LCD_ENABLE 10
-#define LCD_D4 11
-#define LCD_D5 12
-#define LCD_D6 13
-#define LCD_D7 7
-
 #define START_LAP_BUTTON 2
 #define STOP_RESET_BUTTON 3
 #define MODE_BUTTON 8
@@ -52,13 +45,12 @@ char ORDER = LSBFIRST;
 volatile int Direction = 0; //1 counts up, 0 doesn't count, -1 counts down
 volatile char Mode = Up; // Up or Down for counting up or down, defaults to up on startup
 volatile char Count = 0;
-volatile char PresentModeState = 0;
-volatile char PastModeState = 0;
 volatile char Timer_Count = 0;
 char lap_records[50][19]; // 100 Lap strings, 16 bits long
 uint8_t lap_index = 1;
 
-LCD lcd;
+
+
 
 
 int main(void)
@@ -90,19 +82,10 @@ int main(void)
 	JoystickState joystick_state;
 	
 	adc_init();
-	init_joystick(&joystick, 0, 1, 7);
+	init_joystick(&joystick, 0, 1, 19);
 	char timer_index = 7;
 	char joystick_held = 0;
-	//uart_init(F_CPU, 9600);
 	
-	lcd_init(&lcd, LCD_RS, LCD_ENABLE, LCD_D4, LCD_D5, LCD_D6, LCD_D7, 16, 2);
-	lcd_clear(&lcd);
-	_delay_ms(10);
-	
-	//lcd_cursor(&lcd, 0);
-	//lcd_blink(&lcd, 0);
-	lcd_set_cursor(&lcd, 0, 0);
-	lcd_send(&lcd, "STOPWATCH");
 	
 	
 	sei();
@@ -160,8 +143,9 @@ int main(void)
 				} else if(((joystick_state.x < 560)&&(joystick_state.x > 450)) && ((joystick_state.y < 560)&&(joystick_state.y > 450))){
 					joystick_held = 0;
 				}
-				displayDigits(Numbers, ORDER);
-				//_delay_ms(100);
+				
+
+						
 				TCNT1 = 0;
 				Timer_Count = 0;
 				
@@ -207,6 +191,7 @@ int main(void)
 					Numbers[6] = 0;
 					Numbers[7] = 0;
 					displayDigits(Numbers, ORDER);
+					
 					STATE = SET_NUMBERS;
 				}
 				continue;
@@ -245,14 +230,6 @@ ISR(INT0_vect){ // Start/Lap Button
 		Numbers[4] == 10 ? 0: Numbers[4], Numbers[5] == 10 ? 0: Numbers[5], 
 		Numbers[6] == 10 ? 0: Numbers[6], Numbers[7] == 10 ? 0: Numbers[7]); // I tried being clever, if not working update lap index on its own after
 		
-		// TODO: Update the LCD with lap string
-		lcd_clear(&lcd);
-		
-		_delay_ms(5);
-		
-		lcd_set_cursor(&lcd, 0, 0);
-		lcd_send(&lcd, lap_records[lap_index]);
-		//uart_print(lap_records[lap_index]);
 	}
 }
 
@@ -263,9 +240,6 @@ ISR(INT1_vect){ // Stop/Reset Button
 	else{ // Reset
 		lap_index = 1;
 		
-		//lcd_clear(&lcd);
-		//_delay_ms(5);
-		//lcd_set_cursor(&lcd, 0, 0);
 		STATE = RESET;
 	}
 }
@@ -286,8 +260,6 @@ ISR(PCINT0_vect){ // Mode (Could switch to a timer set to an "external timer" tr
 	else {
 		Count++;
 	}
-	//lcd_clear(&lcd);
-	//_delay_ms(5);
 }
 
 ISR(TIMER1_COMPA_vect){ // Idle Timer
